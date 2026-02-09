@@ -1,11 +1,8 @@
 """Tests for read-only mode functionality."""
 
 import json
-import os
-import tempfile
 
 import pytest
-import pytest_asyncio
 
 from radarr_sonarr_mcp.config import Config, RadarrConfig, SonarrConfig, load_config, save_config
 from radarr_sonarr_mcp.server import WRITE_TOOLS, handle_list_tools, handle_call_tool
