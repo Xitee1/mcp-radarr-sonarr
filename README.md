@@ -104,6 +104,33 @@ Run `radarr-sonarr-mcp configure` or manually edit `~/.config/radarr-sonarr-mcp/
     "api_key": "YOUR_SONARR_API_KEY",
     "url": "http://192.168.1.100:8989",
     "base_path": "/api/v3"
+  },
+  "read_only": false
+}
+```
+
+### Read-Only Mode
+
+You can enable read-only mode to prevent any modifications to your media libraries. When enabled, all write operations (add, delete, update, execute commands, etc.) are blocked and only read operations (list, search, get details, view queue/history/calendar, etc.) are available.
+
+Read-only mode can be set in two ways:
+
+1. **Config file**: Set `"read_only": true` in your `config.json`
+2. **Environment variable**: Set `READ_ONLY=true` (also accepts `1` or `yes`)
+
+The environment variable takes precedence over the config file setting.
+
+Example using environment variable in your MCP config:
+```json
+{
+  "mcpServers": {
+    "radarr-sonarr": {
+      "command": "python",
+      "args": ["-m", "radarr_sonarr_mcp.server"],
+      "env": {
+        "READ_ONLY": "true"
+      }
+    }
   }
 }
 ```

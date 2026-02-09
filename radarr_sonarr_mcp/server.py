@@ -33,6 +33,21 @@ logger = logging.getLogger(__name__)
 # Global server instance
 server = Server("radarr-sonarr-mcp")
 
+# Tools that modify data (blocked in read-only mode)
+WRITE_TOOLS = {
+    "add_radarr_movie",
+    "add_sonarr_series",
+    "delete_radarr_movie",
+    "delete_sonarr_series",
+    "update_radarr_movie",
+    "update_sonarr_series",
+    "monitor_sonarr_episodes",
+    "remove_from_queue",
+    "manual_import",
+    "execute_command",
+    "refresh_monitored",
+}
+
 
 def load_config():
     """Load configuration from config module."""
@@ -49,13 +64,15 @@ def load_config():
                 "apiKey": config.sonarr_config.api_key,
                 "url": config.sonarr_config.url,
                 "basePath": config.sonarr_config.base_path
-            }
+            },
+            "readOnly": config.read_only
         }
     except Exception as e:
         logger.error(f"Failed to load config: {e}")
         return {
             "radarrConfig": {"apiKey": "", "url": "http://localhost:7878", "basePath": "/api/v3"},
-            "sonarrConfig": {"apiKey": "", "url": "http://localhost:8989", "basePath": "/api/v3"}
+            "sonarrConfig": {"apiKey": "", "url": "http://localhost:8989", "basePath": "/api/v3"},
+            "readOnly": False
         }
 
 
@@ -510,7 +527,14 @@ async def handle_list_tools() -> list[types.Tool]:
     
     # Add extended tools
     extended_tools = get_extended_tools()
-    return base_tools + extended_tools
+    all_tools = base_tools + extended_tools
+    
+    # Filter out write tools in read-only mode
+    config = load_config()
+    if config.get("readOnly", False):
+        all_tools = [t for t in all_tools if t.name not in WRITE_TOOLS]
+    
+    return all_tools
 
 
 @server.call_tool()
@@ -522,6 +546,13 @@ async def handle_call_tool(
         arguments = {}
     
     config = load_config()
+    
+    # Block write operations in read-only mode
+    if config.get("readOnly", False) and name in WRITE_TOOLS:
+        return [types.TextContent(
+            type="text",
+            text=f"Error: '{name}' is blocked because the server is running in read-only mode."
+        )]
     
     try:
         if name == "get_radarr_movies":
