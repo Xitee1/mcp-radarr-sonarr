@@ -6,6 +6,7 @@ import pytest
 
 from radarr_sonarr_mcp.config import Config, RadarrConfig, SonarrConfig, load_config, save_config
 from radarr_sonarr_mcp.server import WRITE_TOOLS, handle_list_tools, handle_call_tool
+from radarr_sonarr_mcp.server import load_config as server_load_config
 
 
 # --- Config tests ---
@@ -103,6 +104,25 @@ class TestReadOnlyConfig:
             data = json.load(f)
         assert data["read_only"] is True
 
+    def test_malformed_config_file_falls_back_to_env_vars(self, tmp_path, monkeypatch):
+        config_file = tmp_path / "config.json"
+        config_file.write_text("not valid json")
+        monkeypatch.setenv("READ_ONLY", "true")
+        monkeypatch.setenv("RADARR_API_KEY", "test")
+        monkeypatch.setenv("SONARR_API_KEY", "test")
+        config = load_config(str(config_file))
+        assert config.read_only is True
+
+    def test_malformed_config_missing_keys_falls_back(self, tmp_path, monkeypatch):
+        config_file = tmp_path / "config.json"
+        config_file.write_text(json.dumps({"read_only": False}))
+        monkeypatch.setenv("READ_ONLY", "true")
+        monkeypatch.setenv("RADARR_API_KEY", "envkey")
+        monkeypatch.setenv("SONARR_API_KEY", "envkey")
+        config = load_config(str(config_file))
+        assert config.read_only is True
+        assert config.radarr_config.api_key == "envkey"
+
 
 # --- Server tests ---
 
@@ -188,3 +208,24 @@ class TestReadOnlyServer:
         tools = await handle_list_tools()
         tool_names = {t.name for t in tools}
         assert WRITE_TOOLS.issubset(tool_names), f"Missing write tools: {WRITE_TOOLS - tool_names}"
+
+    def test_server_load_config_fallback_respects_read_only_env(self, monkeypatch):
+        """When config loading fails, the server fallback should still honor READ_ONLY env var."""
+        monkeypatch.setenv("READ_ONLY", "true")
+        # Force load_config_module to raise
+        monkeypatch.setattr(
+            "radarr_sonarr_mcp.server.load_config_module",
+            lambda: (_ for _ in ()).throw(RuntimeError("simulated config failure")),
+        )
+        config = server_load_config()
+        assert config["readOnly"] is True
+
+    def test_server_load_config_fallback_defaults_read_only_false(self, monkeypatch):
+        """When config loading fails and READ_ONLY is not set, readOnly should be False."""
+        monkeypatch.delenv("READ_ONLY", raising=False)
+        monkeypatch.setattr(
+            "radarr_sonarr_mcp.server.load_config_module",
+            lambda: (_ for _ in ()).throw(RuntimeError("simulated config failure")),
+        )
+        config = server_load_config()
+        assert config["readOnly"] is False

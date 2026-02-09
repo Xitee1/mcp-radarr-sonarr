@@ -51,18 +51,22 @@ def load_config(config_path: Optional[str] = None) -> Config:
     
     # Try to load from config file first
     if path.exists():
-        with open(path, 'r') as f:
-            data = json.load(f)
-        
-        read_only = data.get("read_only", False)
-        if read_only_env:
-            read_only = read_only_env in ("true", "1", "yes")
-        
-        return Config(
-            radarr_config=RadarrConfig(**data["radarr_config"]),
-            sonarr_config=SonarrConfig(**data["sonarr_config"]),
-            read_only=read_only
-        )
+        try:
+            with open(path, 'r') as f:
+                data = json.load(f)
+            
+            read_only = data.get("read_only", False)
+            if read_only_env:
+                read_only = read_only_env in ("true", "1", "yes")
+            
+            return Config(
+                radarr_config=RadarrConfig(**data["radarr_config"]),
+                sonarr_config=SonarrConfig(**data["sonarr_config"]),
+                read_only=read_only
+            )
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Malformed config file {path}, falling back to environment variables: {e}")
     
     # Fall back to environment variables
     radarr_api_key = os.getenv("RADARR_API_KEY", "")

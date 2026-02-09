@@ -3,6 +3,7 @@
 
 import asyncio
 import logging
+import os
 import sys
 from typing import Any, Optional
 
@@ -69,10 +70,11 @@ def load_config():
         }
     except Exception as e:
         logger.error(f"Failed to load config: {e}")
+        read_only_env = os.getenv("READ_ONLY", "").lower()
         return {
             "radarrConfig": {"apiKey": "", "url": "http://localhost:7878", "basePath": "/api/v3"},
             "sonarrConfig": {"apiKey": "", "url": "http://localhost:8989", "basePath": "/api/v3"},
-            "readOnly": False
+            "readOnly": read_only_env in ("true", "1", "yes")
         }
 
 
