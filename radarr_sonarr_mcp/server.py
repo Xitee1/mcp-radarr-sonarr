@@ -1248,6 +1248,7 @@ async def main():
     if args.transport == "sse":
         from mcp.server.sse import SseServerTransport
         from starlette.applications import Starlette
+        from starlette.responses import Response
         from starlette.routing import Mount, Route
         import uvicorn
 
@@ -1258,6 +1259,7 @@ async def main():
                 request.scope, request.receive, request._send
             ) as streams:
                 await server.run(streams[0], streams[1], init_options)
+            return Response()
 
         app = Starlette(
             routes=[
