@@ -1,0 +1,8 @@
+services:
+  mcp-radarr-sonarr:
+    image: ghcr.io/xitee1/mcp-radarr-sonarr:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config.json:/root/.config/radarr-sonarr-mcp/config.json
+    restart: unless-stopped

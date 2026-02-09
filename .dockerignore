@@ -1,0 +1,16 @@
+.git
+.github
+.gitignore
+.coverage
+__pycache__
+*.py[cod]
+*$py.class
+dist/
+build/
+*.egg-info/
+venv/
+env/
+.env
+.vscode/
+.idea/
+*.log

@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 """MCP server for Radarr and Sonarr integration with Claude Code."""
 
+import argparse
 import asyncio
 import logging
+import os
 import sys
 from typing import Any, Optional
 
@@ -1176,20 +1178,64 @@ async def handle_read_resource(uri: str) -> str:
 
 async def main():
     """Main entry point for the MCP server."""
-    # Run the server using stdin/stdout streams
-    async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
-        await server.run(
-            read_stream,
-            write_stream,
-            InitializationOptions(
-                server_name="radarr-sonarr-mcp",
-                server_version="0.1.0",
-                capabilities=server.get_capabilities(
-                    notification_options=NotificationOptions(),
-                    experimental_capabilities={},
-                ),
-            ),
+    parser = argparse.ArgumentParser(description="Radarr/Sonarr MCP Server")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "sse"],
+        default=os.getenv("MCP_TRANSPORT", "stdio"),
+        help="Transport type (default: stdio, or set MCP_TRANSPORT env var)",
+    )
+    parser.add_argument(
+        "--host",
+        default=os.getenv("MCP_HOST", "0.0.0.0"),
+        help="Host to bind to for SSE transport (default: 0.0.0.0)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=int(os.getenv("MCP_PORT", "8080")),
+        help="Port to bind to for SSE transport (default: 8080)",
+    )
+    args = parser.parse_args()
+
+    init_options = InitializationOptions(
+        server_name="radarr-sonarr-mcp",
+        server_version="0.1.0",
+        capabilities=server.get_capabilities(
+            notification_options=NotificationOptions(),
+            experimental_capabilities={},
+        ),
+    )
+
+    if args.transport == "sse":
+        from mcp.server.sse import SseServerTransport
+        from starlette.applications import Starlette
+        from starlette.routing import Mount, Route
+        import uvicorn
+
+        sse = SseServerTransport("/messages/")
+
+        async def handle_sse(request):
+            async with sse.connect_sse(
+                request.scope, request.receive, request._send
+            ) as streams:
+                await server.run(streams[0], streams[1], init_options)
+
+        app = Starlette(
+            routes=[
+                Route("/sse", endpoint=handle_sse),
+                Mount("/messages/", app=sse.handle_post_message),
+            ],
         )
+
+        logger.info(f"Starting SSE server on {args.host}:{args.port}")
+        config = uvicorn.Config(app, host=args.host, port=args.port)
+        uvicorn_server = uvicorn.Server(config)
+        await uvicorn_server.serve()
+    else:
+        # Run the server using stdin/stdout streams
+        async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
+            await server.run(read_stream, write_stream, init_options)
 
 
 if __name__ == "__main__":
