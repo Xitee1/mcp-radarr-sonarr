@@ -109,6 +109,14 @@ class TestReadOnlyConfig:
 class TestReadOnlyServer:
     """Tests for read-only mode in the server."""
 
+    @pytest.fixture(autouse=True)
+    def _isolate_config(self, tmp_path, monkeypatch):
+        """Prevent tests from picking up a real ~/.config/radarr-sonarr-mcp/config.json."""
+        monkeypatch.setattr(
+            "radarr_sonarr_mcp.config.get_config_path",
+            lambda: tmp_path / "config.json",
+        )
+
     def test_write_tools_set_is_not_empty(self):
         assert len(WRITE_TOOLS) > 0
 
