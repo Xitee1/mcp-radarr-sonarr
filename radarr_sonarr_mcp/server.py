@@ -1221,8 +1221,10 @@ async def main():
 
         sse = SseServerTransport("/messages/")
 
-        async def handle_sse(scope, receive, send):
-            async with sse.connect_sse(scope, receive, send) as streams:
+        async def handle_sse(request):
+            async with sse.connect_sse(
+                request.scope, request.receive, request._send
+            ) as streams:
                 await server.run(streams[0], streams[1], init_options)
 
         app = Starlette(
