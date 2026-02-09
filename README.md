@@ -42,6 +42,32 @@ pip install -e .
    }
    ```
 
+## Docker Setup
+
+Run the MCP server as a Docker container using SSE transport:
+
+1. Create a `config.json` file with your Radarr/Sonarr configuration (see [Configuration](#configuration)).
+
+2. Start the server with Docker Compose:
+   ```yaml
+   services:
+     mcp-radarr-sonarr:
+       build: .
+       # Alternatively, use the pre-built image:
+       # image: ghcr.io/<owner>/<repo>:latest
+       ports:
+         - "8080:8080"
+       volumes:
+         - ./config.json:/root/.config/radarr-sonarr-mcp/config.json
+       restart: unless-stopped
+   ```
+
+   ```bash
+   docker compose up -d
+   ```
+
+3. Connect your MCP client to the SSE endpoint at `http://localhost:8080/sse`.
+
 ## Available Tools
 
 ### Media Management

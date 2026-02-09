@@ -1,0 +1,10 @@
+services:
+  mcp-radarr-sonarr:
+    build: .
+    # Alternatively, use the pre-built image:
+    # image: ghcr.io/<owner>/<repo>:latest
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./config.json:/root/.config/radarr-sonarr-mcp/config.json
+    restart: unless-stopped
