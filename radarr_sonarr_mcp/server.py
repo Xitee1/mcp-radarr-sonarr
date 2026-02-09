@@ -1189,7 +1189,7 @@ async def main():
     parser.add_argument(
         "--host",
         default=os.getenv("MCP_HOST", "127.0.0.1"),
-        help="Host to bind to for SSE transport (default: 127.0.0.1)",
+        help="Host to bind to for SSE transport (default: 127.0.0.1; set MCP_HOST or --host to expose externally)",
     )
     parser.add_argument(
         "--port",
