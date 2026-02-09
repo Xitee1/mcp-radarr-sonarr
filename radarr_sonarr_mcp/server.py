@@ -3,6 +3,7 @@
 
 import argparse
 import asyncio
+import importlib.metadata
 import logging
 import os
 import sys
@@ -1187,8 +1188,8 @@ async def main():
     )
     parser.add_argument(
         "--host",
-        default=os.getenv("MCP_HOST", "0.0.0.0"),
-        help="Host to bind to for SSE transport (default: 0.0.0.0)",
+        default=os.getenv("MCP_HOST", "127.0.0.1"),
+        help="Host to bind to for SSE transport (default: 127.0.0.1)",
     )
     parser.add_argument(
         "--port",
@@ -1198,9 +1199,14 @@ async def main():
     )
     args = parser.parse_args()
 
+    try:
+        pkg_version = importlib.metadata.version("radarr-sonarr-mcp")
+    except importlib.metadata.PackageNotFoundError:
+        pkg_version = "0.0.0"
+
     init_options = InitializationOptions(
         server_name="radarr-sonarr-mcp",
-        server_version="0.1.0",
+        server_version=pkg_version,
         capabilities=server.get_capabilities(
             notification_options=NotificationOptions(),
             experimental_capabilities={},

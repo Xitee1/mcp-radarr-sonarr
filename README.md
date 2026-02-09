@@ -52,7 +52,9 @@ Run the MCP server as a Docker container using SSE transport:
    ```yaml
    services:
      mcp-radarr-sonarr:
-       image: ghcr.io/xitee1/mcp-radarr-sonarr:latest
+       build: .
+       # Alternatively, use the pre-built image:
+       # image: ghcr.io/<owner>/<repo>:latest
        ports:
          - "8080:8080"
        volumes:
