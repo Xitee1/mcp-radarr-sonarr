@@ -44,6 +44,14 @@ def configure():
     sonarr_base_path = input(f"Sonarr API base path [{config.sonarr_config.base_path if config else '/api/v3'}]: ")
     sonarr_base_path = sonarr_base_path or (config.sonarr_config.base_path if config else '/api/v3')
     
+    # Read-only mode
+    read_only_default = config.read_only if config else False
+    read_only_input = input(f"Enable read-only mode? (y/n) [{'y' if read_only_default else 'n'}]: ").strip().lower()
+    if read_only_input:
+        read_only = read_only_input in ("y", "yes", "true", "1")
+    else:
+        read_only = read_only_default
+    
     # Create new config
     new_config = Config(
         radarr_config=RadarrConfig(
@@ -55,7 +63,8 @@ def configure():
             api_key=sonarr_api_key,
             url=sonarr_url,
             base_path=sonarr_base_path
-        )
+        ),
+        read_only=read_only
     )
     
     # Save config
@@ -94,6 +103,7 @@ def show_status():
         logging.info("==== Radarr/Sonarr MCP Server Status ====")
         logging.info(f"Radarr URL: {config.radarr_config.url}")
         logging.info(f"Sonarr URL: {config.sonarr_config.url}")
+        logging.info(f"Read-only mode: {'enabled' if config.read_only else 'disabled'}")
         logging.info(f"Transport: STDIO (for Claude Code integration)")
         logging.info(f"Server is configured and ready for Claude Code.")
     except Exception as e:

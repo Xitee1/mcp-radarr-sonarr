@@ -28,6 +28,7 @@ class Config:
     """Main configuration container."""
     radarr_config: RadarrConfig
     sonarr_config: SonarrConfig
+    read_only: bool = False
 
 
 def get_config_path() -> Path:
@@ -45,15 +46,27 @@ def load_config(config_path: Optional[str] = None) -> Config:
     else:
         path = get_config_path()
     
+    # Environment variable override for read-only mode (takes precedence)
+    read_only_env = os.getenv("READ_ONLY", "").lower()
+    
     # Try to load from config file first
     if path.exists():
-        with open(path, 'r') as f:
-            data = json.load(f)
-        
-        return Config(
-            radarr_config=RadarrConfig(**data["radarr_config"]),
-            sonarr_config=SonarrConfig(**data["sonarr_config"])
-        )
+        try:
+            with open(path, 'r') as f:
+                data = json.load(f)
+            
+            read_only = data.get("read_only", False)
+            if read_only_env:
+                read_only = read_only_env in ("true", "1", "yes")
+            
+            return Config(
+                radarr_config=RadarrConfig(**data["radarr_config"]),
+                sonarr_config=SonarrConfig(**data["sonarr_config"]),
+                read_only=read_only
+            )
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            import logging
+            logging.getLogger(__name__).warning(f"Malformed config file {path}, falling back to environment variables: {e}")
     
     # Fall back to environment variables
     radarr_api_key = os.getenv("RADARR_API_KEY", "")
@@ -64,9 +77,12 @@ def load_config(config_path: Optional[str] = None) -> Config:
     sonarr_url = os.getenv("SONARR_URL", "http://localhost:8989")
     sonarr_base_path = os.getenv("SONARR_BASE_PATH", "/api/v3")
     
+    read_only = read_only_env in ("true", "1", "yes") if read_only_env else False
+    
     return Config(
         radarr_config=RadarrConfig(api_key=radarr_api_key, url=radarr_url, base_path=radarr_base_path),
-        sonarr_config=SonarrConfig(api_key=sonarr_api_key, url=sonarr_url, base_path=sonarr_base_path)
+        sonarr_config=SonarrConfig(api_key=sonarr_api_key, url=sonarr_url, base_path=sonarr_base_path),
+        read_only=read_only
     )
 
 
@@ -90,7 +106,8 @@ def save_config(config: Config, config_path: Optional[str] = None) -> None:
             "api_key": config.sonarr_config.api_key,
             "url": config.sonarr_config.url,
             "base_path": config.sonarr_config.base_path
-        }
+        },
+        "read_only": config.read_only
     }
     
     with open(path, 'w') as f:
